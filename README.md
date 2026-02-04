@@ -10,17 +10,14 @@ GCS buckets cannot be directly protected by IAP. This proxy runs on App Engine w
 User -> IAP -> App Engine (gcsgate) -> GCS
 ```
 
-## Deployment
+## Prerequisites
 
-```bash
-make deploy PROJECT=your-gcp-project SERVICE_ACCOUNT=gcsgate@your-gcp-project.iam.gserviceaccount.com
-```
+- Google Cloud project with billing enabled
+- `gcloud` CLI installed and configured
 
 ## Setup
 
 ### 1. Create a Service Account
-
-Create a dedicated service account for gcsgate:
 
 ```bash
 gcloud iam service-accounts create gcsgate \
@@ -28,9 +25,15 @@ gcloud iam service-accounts create gcsgate \
   --display-name="gcsgate"
 ```
 
-### 2. Grant GCS Access
+### 2. Create a GCS Bucket
 
-Grant the service account read access to specific buckets:
+```bash
+gcloud storage buckets create gs://your-bucket \
+  --project=your-gcp-project \
+  --location=asia-northeast1
+```
+
+### 3. Grant Bucket Access
 
 ```bash
 gcloud storage buckets add-iam-policy-binding gs://your-bucket \
@@ -40,7 +43,13 @@ gcloud storage buckets add-iam-policy-binding gs://your-bucket \
 
 Repeat for each bucket you want to serve.
 
-### 3. Enable IAP
+### 4. Deploy
+
+```bash
+make deploy PROJECT=your-gcp-project SERVICE_ACCOUNT=gcsgate@your-gcp-project.iam.gserviceaccount.com
+```
+
+### 5. Enable IAP
 
 1. Go to [IAP settings](https://console.cloud.google.com/security/iap) in Google Cloud Console
 2. Enable IAP for your App Engine application
@@ -60,7 +69,6 @@ Examples:
 |---------|------------|
 | `/my-bucket/reports/2024/data.html` | `gs://my-bucket/reports/2024/data.html` |
 | `/my-bucket/images/chart.png` | `gs://my-bucket/images/chart.png` |
-| `/another-bucket/dir/file.csv` | `gs://another-bucket/dir/file.csv` |
 
 Full URL: `https://your-gcp-project.appspot.com/{bucket}/{path}`
 
@@ -68,10 +76,9 @@ Relative path references in HTML files (`./image.png`, `../style.css`, etc.) wor
 
 ## Configuration
 
-See `app.yaml` for configuration options. Key settings:
+See `app.yaml` for configuration options:
 
 - `service`: Service name (default: `gcsgate`)
-- `service_account`: Service account for GCS access
 - `instance_class`: Instance size (default: `F1`)
 - `automatic_scaling`: Scaling configuration
 
