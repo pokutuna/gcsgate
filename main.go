@@ -73,6 +73,11 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", reader.Attrs.ContentType)
 	}
 
+	// text/* はブラウザで表示させる
+	if strings.HasPrefix(reader.Attrs.ContentType, "text/") {
+		w.Header().Set("Content-Disposition", "inline")
+	}
+
 	// コンテンツをストリーム
 	if _, err := io.Copy(w, reader); err != nil {
 		log.Printf("Failed to stream object: %v", err)
