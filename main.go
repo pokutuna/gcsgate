@@ -22,9 +22,11 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if ok := r.Header.Get("x-goog-iap-jwt-assertion"); ok == "" {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
+	if os.Getenv("SKIP_IAP_CHECK") == "" {
+		if r.Header.Get("x-goog-iap-jwt-assertion") == "" {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
 	}
 
 	path := strings.TrimPrefix(r.URL.Path, "/")
@@ -69,12 +71,20 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 	defer reader.Close()
 
 	// Content-Type を設定
-	if reader.Attrs.ContentType != "" {
-		w.Header().Set("Content-Type", reader.Attrs.ContentType)
+	contentType := reader.Attrs.ContentType
+	if mt := r.URL.Query().Get("mimetype"); mt != "" {
+		contentType = mt
+	}
+	// text/* で charset 未指定なら utf-8 を付与
+	if strings.HasPrefix(contentType, "text/") && !strings.Contains(contentType, "charset") {
+		contentType += "; charset=utf-8"
+	}
+	if contentType != "" {
+		w.Header().Set("Content-Type", contentType)
 	}
 
 	// text/* はブラウザで表示させる
-	if strings.HasPrefix(reader.Attrs.ContentType, "text/") {
+	if strings.HasPrefix(contentType, "text/") {
 		w.Header().Set("Content-Disposition", "inline")
 	}
 
